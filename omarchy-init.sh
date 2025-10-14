@@ -24,6 +24,10 @@ WEBAPP_REMOVE=(
   Hey
 )
 
+STOW_CONFIG_DIRS=(
+  hypr
+)
+
 # === Update and install packages ===
 log "Updating system and installing packages..."
 sudo pacman -Syu --noconfirm
@@ -39,17 +43,13 @@ rm -f "$HOME/.config/1password"
 log "Removing Basecamp and Hey webapps via omarchy script..."
 omarchy-webapp-remove "${WEBAPP_REMOVE[@]}"
 
-# === Apply dotfiles ===
-DOTFILES_DIR="$HOME/.config"
-cd "$DOTFILES_DIR" || {
-  log "❌ Could not enter $DOTFILES_DIR"
-  exit 1
-}
+log "Removing Omarchy hypr config files..."
+rm -rf "$HOME/.config/hypr/bindings.conf" "$HOME/.config/hypr/monitors.conf" "$HOME/.config/hypr/input.conf"
 
 log "Applying dotfiles with stow..."
-for dir in */; do
+for dir in "${STOW_CONFIG_DIRS[@]}"; do
   log "→ Stowing ${dir%/}"
-  stow -R "${dir%/}"
+  stow -t "$HOME" "${dir%/}"
 done
 
 log "✅ System initialization complete!"
