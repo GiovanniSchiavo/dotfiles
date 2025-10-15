@@ -8,6 +8,7 @@ log() {
 # === Packages to install ===
 PACKAGES=(
   stow
+  tickrs
   digikam
   darktable
   telegram-desktop
@@ -27,6 +28,7 @@ WEBAPP_REMOVE=(
 STOW_CONFIG_DIRS=(
   hypr
   uwsm
+  tickrs
 )
 
 # === Update and install packages ===
