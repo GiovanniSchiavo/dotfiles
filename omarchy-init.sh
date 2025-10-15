@@ -26,6 +26,7 @@ WEBAPP_REMOVE=(
 
 STOW_CONFIG_DIRS=(
   hypr
+  uwsm
 )
 
 # === Update and install packages ===
@@ -45,6 +46,7 @@ omarchy-webapp-remove "${WEBAPP_REMOVE[@]}"
 
 log "Removing Omarchy hypr config files..."
 rm -rf "$HOME/.config/hypr/bindings.conf" "$HOME/.config/hypr/monitors.conf" "$HOME/.config/hypr/input.conf"
+rm -rf "$HOME/.config/uwsm/default" 
 
 log "Applying dotfiles with stow..."
 for dir in "${STOW_CONFIG_DIRS[@]}"; do
