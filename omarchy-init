@@ -1,0 +1,158 @@
+#!/bin/bash
+set -euo pipefail
+
+# === Helper function for logging ===
+log() {
+  echo -e "\n\033[1;34m[INIT]\033[0m $1"
+}
+
+# === Packages to install ===
+PACKAGES=(
+  stow
+  tickrs
+  digikam
+  darktable
+  telegram-desktop
+)
+
+PACKAGES_REMOVE=(
+  1password
+  1password-cli
+  1password-beta
+)
+
+WEBAPP_REMOVE=(
+  Basecamp
+  Hey
+)
+
+STOW_CONFIG_DIRS=(
+  hypr
+  uwsm
+  tickrs
+)
+
+# === Update and install packages ===
+log "Updating system and installing packages..."
+sudo pacman -Syu --noconfirm
+sudo pacman -S --noconfirm --needed "${PACKAGES[@]}"
+
+# === Clean up unwanted apps ===
+log "Removing Packages and related config..."
+sudo pacman -Rns --noconfirm "${PACKAGES_REMOVE[@]}" || true
+rm -f "$HOME/.config/1password"
+
+# === Remove webapps ===
+log "Removing Basecamp and Hey webapps via omarchy script..."
+omarchy-webapp-remove "${WEBAPP_REMOVE[@]}"
+
+log "Removing Omarchy hypr config files..."
+rm -rf "$HOME/.config/hypr/bindings.conf" "$HOME/.config/hypr/monitors.conf" "$HOME/.config/hypr/input.conf"
+rm -rf "$HOME/.config/uwsm/default" 
+
+log "Applying dotfiles with stow..."
+for dir in "${STOW_CONFIG_DIRS[@]}"; do
+  log "→ Stowing ${dir%/}"
+  stow -t "$HOME" "${dir%/}"
+done
+
+# === Creating custom directories ===
+log "Creating custom directories..."
+CUSTOM_DIRS=(
+  "$HOME/Codice/Personale"
+  "$HOME/Codice/Lavoro"
+)
+for dir in "${CUSTOM_DIRS[@]}"; do
+  if [[ ! -d "$dir" ]]; then
+    mkdir -p "$dir"
+    log "Created directory: $dir"
+  else
+    log "Directory already exists: $dir"
+  fi
+done
+
+# === Ask for MateBook 14s setup ===
+echo ""
+read -rp "Is this system a Huawei MateBook 14s? [y/N]: " ANSWER
+ANSWER=${ANSWER,,} # to lowercase
+
+if [[ "$ANSWER" == "y" || "$ANSWER" == "yes" ]]; then
+  log "Detected MateBook 14s — installing toggle-audio..."
+
+  # === Symlink toggle-audio with Stow ===
+  log "Symlinking toggle-audio with stow..."
+  stow -t "$HOME" bin
+  chmod +x "$HOME/.local/bin/toggle-audio"
+
+  log "Installing alsa-tools..."
+  sudo pacman -S --noconfirm --needed alsa-tools
+
+  # === Add sudoers rule for hda-verb ===
+  USERNAME="$(whoami)"
+  SUDOERS_LINE="$USERNAME ALL=(ALL) NOPASSWD: /usr/bin/hda-verb /dev/snd/hwC0D0 *"
+
+  log "Adding sudoers entry for $USERNAME to allow hda-verb without password..."
+  if sudo grep -qF "$SUDOERS_LINE" /etc/sudoers; then
+    log "Sudoers entry already exists — skipping."
+  else
+    echo "$SUDOERS_LINE" | sudo EDITOR='tee -a' visudo >/dev/null
+    log "Added new sudoers entry for $USERNAME."
+  fi
+
+
+  # === Hyprland keybind ===
+  HYPR_CONF="$HOME/.config/hypr/bindings.conf"
+  if [[ -f "$HYPR_CONF" && ! $(grep -q 'toggle-audio' "$HYPR_CONF") ]]; then
+    printf '\n%s\n' "bind = SUPER, U, exec, toggle-audio" >> "$HYPR_CONF"
+    log "Added Hyprland keybinding to $HYPR_CONF"
+  fi
+
+else
+  # === Ask for NAS desktop setup ===
+  echo ""
+  read -rp "Is this system the NAS desktop PC? [y/N]: " NAS_ANSWER
+  NAS_ANSWER=${NAS_ANSWER,,} # to lowercase
+
+  if [[ "$NAS_ANSWER" == "y" || "$NAS_ANSWER" == "yes" ]]; then
+    log "Detected NAS desktop PC — setting up ZFS..."
+
+    # === Install linux-lts and zfs-dkms ===
+    log "Installing linux-lts and zfs-dkms..."
+    sudo pacman -S --noconfirm --needed linux-lts linux-lts-headers zfs-dkms
+
+    # === Remove linux kernel ===
+    log "Removing linux kernel..."
+    sudo pacman -Rns --noconfirm linux || true
+
+    # === Import and mount ZFS pool ===
+    log "Importing ZFS pool 'Pool'..."
+    sudo zpool import -f Pool || log "Pool already imported or unavailable"
+
+    log "Mounting ZFS pool at /mnt/Pool..."
+    POOL_MOUNT="/mnt/Pool"
+    if [[ ! -d "$POOL_MOUNT" ]]; then
+      sudo mkdir -p "$POOL_MOUNT"
+    fi
+    
+    # Set mountpoint for the pool
+    sudo zfs set mountpoint="$POOL_MOUNT" Pool || log "Failed to set mountpoint"
+    sudo zfs mount Pool || log "Pool already mounted or unavailable"
+
+    # === Create symlink in home directory ===
+    log "Creating symlink from $HOME/Pool to /mnt/Pool..."
+    if [[ -L "$HOME/Pool" ]]; then
+      log "Symlink already exists — skipping."
+    elif [[ -e "$HOME/Pool" ]]; then
+      log "Warning: $HOME/Pool exists but is not a symlink — skipping."
+    else
+      ln -s "/mnt/Pool" "$HOME/Pool"
+      log "Symlink created: $HOME/Pool → /mnt/Pool"
+    fi
+
+    log "ZFS setup complete!"
+  else
+    log "Skipping NAS desktop setup."
+  fi
+fi
+
+log "✅ System initialization complete!"

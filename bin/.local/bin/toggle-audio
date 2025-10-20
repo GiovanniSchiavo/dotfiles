@@ -1,0 +1,44 @@
+#!/bin/bash
+# Toggle audio output (Huawei MateBook 14s workaround)
+# Requires: alsa-tools (for hda-verb)
+# Optional: swayosd-client (for OSD)
+
+CARD="/dev/snd/hwC0D0"
+STATE_FILE="$HOME/.cache/audio_output_state"
+
+if [[ ! -f "$STATE_FILE" ]]; then
+    echo "speaker" > "$STATE_FILE"
+fi
+
+CURRENT=$(cat "$STATE_FILE")
+
+if [[ "$CURRENT" == "speaker" ]]; then
+    sudo hda-verb $CARD 0x16 0x701 0x0000
+    sudo hda-verb $CARD 0x17 0x70C 0x0000
+    sudo hda-verb $CARD 0x1  0x717 0x2
+    sudo hda-verb $CARD 0x1  0x716 0x2
+    sudo hda-verb $CARD 0x1  0x715 0x0
+
+    echo "headphones" > "$STATE_FILE"
+    OUTPUT="Headphones"
+    ICON="audio-headphones-symbolic"
+
+else
+    sudo hda-verb $CARD 0x16 0x701 0x0001
+    sudo hda-verb $CARD 0x17 0x70C 0x0002
+    sudo hda-verb $CARD 0x1  0x715 0x2
+
+    echo "speaker" > "$STATE_FILE"
+    OUTPUT="Speakers"
+    ICON="audio-volume-high-symbolic"
+fi
+
+# OSD / notification
+focused_monitor="$(hyprctl monitors -j | jq -r '.[] | select(.focused == true).name')"
+
+swayosd-client \
+    --monitor "$focused_monitor" \
+    --custom-message "Switched to $OUTPUT" \
+    --custom-icon "$ICON"
+
+echo "Audio toggled to $(cat $STATE_FILE)"
