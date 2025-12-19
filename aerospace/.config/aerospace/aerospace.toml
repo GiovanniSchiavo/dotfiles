@@ -30,17 +30,16 @@ if.app-name-regex-substring = 'whatsapp'
 run = 'layout floating'
 
 [gaps]
-inner.horizontal = 8
-inner.vertical = 8
-outer.left = 4
-outer.bottom = 4
-outer.top = 4
-outer.right = 4
-
+inner.horizontal = [{ monitor.built-in = 8 }, 12]
+inner.vertical = [{ monitor.built-in = 8 }, 12]
+outer.top = [{ monitor.built-in = 8 }, 42]
+outer.left = [{ monitor.built-in = 4 }, 12]
+outer.bottom = [{ monitor.built-in = 4 }, 24]
+outer.right = [{ monitor.built-in = 4 }, 12]
 [mode.main.binding]
 
 # All possible keys:
-# - Letters.        a, b, c, ..., z
+# - Letters.        a, b, c,  ..., z
 # - Numbers.        0, 1, 2, ..., 9
 # - Keypad numbers. keypad0, keypad1, keypad2, ..., keypad9
 # - F-keys.         f1, f2, ..., f20
