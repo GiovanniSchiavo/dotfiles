@@ -1,16 +1,16 @@
 config-version = 2
 
 after-startup-command = [
-  'exec-and-forget sketchybar',
+  #'exec-and-forget sketchybar',
   'exec-and-forget borders active_color=0xffcdd6f4 inactive_color=0xff45475a width=3.0 style=rounded',
 ]
 
 # Notify Sketchybar about workspace change
-exec-on-workspace-change = [
-  '/bin/bash',
-  '-c',
-  'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE',
-]
+# exec-on-workspace-change = [
+#  '/bin/bash',
+#  '-c',
+#  'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE',
+#]
 
 automatically-unhide-macos-hidden-apps = true
 start-at-login = true
